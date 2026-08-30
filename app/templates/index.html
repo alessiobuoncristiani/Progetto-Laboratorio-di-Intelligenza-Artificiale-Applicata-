@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Diabetes Risk Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <p class="eyebrow">Laboratorio di Intelligenza Artificiale Applicata</p>
+        <h1>Stima del rischio di diabete</h1>
+        <p>Inserisci i parametri clinici per una previsione didattica del modello.</p>
+      </header>
+      <p class="notice">Questo strumento non fornisce diagnosi e non sostituisce il parere di un medico.</p>
+      {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+      {% if result %}
+      <section class="result {{ 'high' if result.prediction else 'low' }}" aria-live="polite">
+        <h2>{{ result.label }}</h2>
+        <p>Probabilità stimata: <strong>{{ '%.1f'|format(result.probability * 100) }}%</strong></p>
+        <small>{{ result.disclaimer }}</small>
+      </section>
+      {% endif %}
+      <form method="post" novalidate>
+        <div class="grid">
+          {% for field in fields %}
+          <label>{{ labels[field] }}
+            <input type="number" name="{{ field }}" step="any" min="0" required value="{{ values.get(field, '') if values else '' }}">
+          </label>
+          {% endfor %}
+        </div>
+        <button type="submit">Calcola la stima</button>
+      </form>
+      <footer><a href="/api/health">Stato API</a> · POST <code>/api/predict</code></footer>
+    </main>
+  </body>
+</html>
