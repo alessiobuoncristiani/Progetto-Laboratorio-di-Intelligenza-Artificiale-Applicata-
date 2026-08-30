@@ -1,2 +1,16 @@
 __pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.venv/
+venv/
+.env
+.DS_Store
 .ipynb_checkpoints/
+
+# Downloaded data and generated artefacts are reproducible and not versioned.
+data/raw/
+data/processed/
+models/*.joblib
+reports/figures/
+reports/metrics.json

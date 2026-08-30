@@ -1,0 +1,10 @@
+.git
+.venv
+venv
+__pycache__
+.pytest_cache
+data/raw
+models
+reports/figures
+reports/metrics.json
+*.pyc
