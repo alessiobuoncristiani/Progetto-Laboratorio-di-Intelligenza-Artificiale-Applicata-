@@ -52,11 +52,19 @@ La risposta contiene la classe stimata (`prediction`), la probabilita` stimata e
 
 ## Docker
 
+Prima prepara dataset e modello localmente (il download richiede una connessione funzionante):
+
+```bash
+python -m src.train
+```
+
+Poi avvia il container:
+
 ```bash
 docker compose up --build
 ```
 
-Al primo avvio il container scarica i dati e addestra il modello; l'app sara` poi disponibile su `http://localhost:5000`.
+Le cartelle locali `data/`, `models/` e `reports/` sono montate nel container. In questo modo il modello viene addestrato solo se non esiste già e l'app resta disponibile anche quando il container non può raggiungere il sito del dataset.
 
 ## Dataset e limiti
 
