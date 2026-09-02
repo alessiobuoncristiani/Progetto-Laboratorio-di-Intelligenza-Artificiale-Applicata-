@@ -1,6 +1,7 @@
 import pytest
+import numpy as np
 
-from app.app import parse_payload
+from app.app import app, parse_payload
 
 
 def valid_payload():
@@ -26,3 +27,35 @@ def test_parse_payload_requires_all_fields():
     payload.pop("age")
     with pytest.raises(ValueError, match="Campo obbligatorio"):
         parse_payload(payload)
+
+
+def test_home_page_is_available():
+    response = app.test_client().get("/")
+    assert response.status_code == 200
+    assert "Stima del rischio di diabete" in response.get_data(as_text=True)
+
+
+def test_api_predict_returns_prediction(monkeypatch):
+    class DummyModel:
+        def predict_proba(self, frame):
+            return np.array([[0.8, 0.2]])
+
+    monkeypatch.setattr("app.app.load_model", lambda path: DummyModel())
+    response = app.test_client().post("/api/predict", json=valid_payload())
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert data["prediction"] == 0
+    assert data["probability"] == 0.2
+
+
+def test_api_predict_rejects_missing_json():
+    response = app.test_client().post("/api/predict", json={})
+    assert response.status_code == 400
+    assert "Campo obbligatorio" in response.get_json()["error"]
+
+
+def test_health_reports_model_status():
+    response = app.test_client().get("/api/health")
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "ok"

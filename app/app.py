@@ -14,7 +14,44 @@ FIELD_LABELS = {
     "insulin": "Insulina (mu U/ml)", "bmi": "BMI (kg/m²)",
     "diabetes_pedigree": "Diabetes Pedigree Function", "age": "Età (anni)",
 }
-NON_NEGATIVE_FIELDS = {"pregnancies", "bmi", "age"}
+FIELD_HINTS = {
+    "pregnancies": "Numero di gravidanze effettuate. Lo zero è un valore valido.",
+    "glucose": "Concentrazione di glucosio nel sangue; lo zero indica un dato mancante.",
+    "blood_pressure": "Pressione diastolica; lo zero indica un dato mancante.",
+    "skin_thickness": "Spessore della plica cutanea; lo zero indica un dato mancante.",
+    "insulin": "Valore dell'insulina nel sangue; lo zero indica un dato mancante.",
+    "bmi": "Indice di massa corporea; lo zero indica un dato mancante.",
+    "diabetes_pedigree": "Indicatore della familiarità per il diabete.",
+    "age": "Età della persona esaminata, in anni.",
+}
+FIELD_PLACEHOLDERS = {
+    "pregnancies": "es. 2",
+    "glucose": "es. 120",
+    "blood_pressure": "es. 70",
+    "skin_thickness": "es. 20",
+    "insulin": "es. 79",
+    "bmi": "es. 28.5",
+    "diabetes_pedigree": "es. 0.3",
+    "age": "es. 35",
+}
+FIELD_GROUPS = [
+    {
+        "title": "Dati personali",
+        "description": "Informazioni anagrafiche e storia delle gravidanze.",
+        "fields": ["pregnancies", "age"],
+    },
+    {
+        "title": "Misure cliniche",
+        "description": "Valori rilevati durante la visita o l'esame diagnostico.",
+        "fields": ["glucose", "blood_pressure", "bmi"],
+    },
+    {
+        "title": "Altri indicatori",
+        "description": "Parametri aggiuntivi utilizzati dal modello predittivo.",
+        "fields": ["skin_thickness", "insulin", "diabetes_pedigree"],
+    },
+]
+NON_NEGATIVE_FIELDS = set(FEATURE_COLUMNS)
 
 
 def parse_payload(payload: dict) -> dict:
@@ -59,15 +96,15 @@ def create_app(model_path: Path = MODEL_PATH) -> Flask:
 
     @app.get("/")
     def index():
-        return render_template("index.html", fields=FEATURE_COLUMNS, labels=FIELD_LABELS)
+        return render_template("index.html", groups=FIELD_GROUPS, labels=FIELD_LABELS, hints=FIELD_HINTS, placeholders=FIELD_PLACEHOLDERS)
 
     @app.post("/")
     def form_prediction():
         try:
             result = predict(parse_payload(request.form.to_dict()))
-            return render_template("index.html", fields=FEATURE_COLUMNS, labels=FIELD_LABELS, result=result, values=request.form)
+            return render_template("index.html", groups=FIELD_GROUPS, labels=FIELD_LABELS, hints=FIELD_HINTS, placeholders=FIELD_PLACEHOLDERS, result=result, values=request.form)
         except (ValueError, FileNotFoundError) as exc:
-            return render_template("index.html", fields=FEATURE_COLUMNS, labels=FIELD_LABELS, error=str(exc), values=request.form), 400
+            return render_template("index.html", groups=FIELD_GROUPS, labels=FIELD_LABELS, hints=FIELD_HINTS, placeholders=FIELD_PLACEHOLDERS, error=str(exc), values=request.form), 400
 
     @app.post("/api/predict")
     def api_prediction():
