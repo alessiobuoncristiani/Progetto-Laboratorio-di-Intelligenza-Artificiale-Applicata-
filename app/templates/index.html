@@ -3,36 +3,81 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Diabetes Risk Prediction</title>
+    <title>Stima del rischio di diabete</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
   <body>
     <main class="container">
-      <header>
-        <p class="eyebrow">Laboratorio di Intelligenza Artificiale Applicata</p>
-        <h1>Stima del rischio di diabete</h1>
-        <p>Inserisci i parametri clinici per una previsione didattica del modello.</p>
+      <header class="hero">
+        <div class="hero-content">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <p class="eyebrow">Laboratorio di Intelligenza Artificiale Applicata</p>
+          <h1>Stima del rischio di diabete</h1>
+          <p class="intro">Inserisci i parametri clinici per ottenere una stima dal modello di machine learning.</p>
+          <span class="model-badge">Modello: Logistic Regression</span>
+        </div>
       </header>
-      <p class="notice">Questo strumento non fornisce diagnosi e non sostituisce il parere di un medico.</p>
-      {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+      <div class="notice" role="note">
+        <strong>Uso didattico</strong>
+        <span>Questo strumento non fornisce diagnosi e non sostituisce il parere di un medico.</span>
+      </div>
+      {% if error %}<p class="error" role="alert"><strong>Impossibile calcolare la stima.</strong> {{ error }}</p>{% endif %}
+      <section class="about">
+        <div class="about-column">
+          <p class="section-kicker">Prima di iniziare</p>
+          <h2>Come funziona l'applicazione?</h2>
+          <p>L'applicazione riceve otto parametri, applica lo stesso preprocessing usato durante l'addestramento e utilizza una Logistic Regression per assegnare l'osservazione alla classe 0 o alla classe 1.</p>
+        </div>
+        <div class="about-column">
+          <p class="section-kicker">Interpretazione</p>
+          <h2>Che cosa indica la percentuale?</h2>
+          <p>La percentuale esprime quanto il modello considera simile l'osservazione ai casi positivi presenti nel dataset. Non rappresenta la probabilità clinica reale di sviluppare la malattia.</p>
+        </div>
+      </section>
       {% if result %}
       <section class="result {{ 'high' if result.prediction else 'low' }}" aria-live="polite">
-        <h2>{{ result.label }}</h2>
-        <p>Probabilità stimata: <strong>{{ '%.1f'|format(result.probability * 100) }}%</strong></p>
+        <div class="result-heading">
+          <div>
+            <p class="result-kicker">Risultato della predizione</p>
+            <h2>{{ result.label }}</h2>
+          </div>
+          <strong class="probability">{{ '%.1f'|format(result.probability * 100) }}%</strong>
+        </div>
+        <div class="progress" aria-label="Probabilità stimata">
+          <span style="width: {{ result.probability * 100 }}%"></span>
+        </div>
         <small>{{ result.disclaimer }}</small>
       </section>
       {% endif %}
-      <form method="post" novalidate>
-        <div class="grid">
-          {% for field in fields %}
-          <label>{{ labels[field] }}
-            <input type="number" name="{{ field }}" step="any" min="0" required value="{{ values.get(field, '') if values else '' }}">
-          </label>
-          {% endfor %}
+      <form method="post" novalidate class="prediction-form">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Dati di input</p>
+            <h2>Parametri della persona</h2>
+          </div>
+          <span class="required-note">* Campo obbligatorio</span>
         </div>
-        <button type="submit">Calcola la stima</button>
+        {% for group in groups %}
+        <fieldset class="input-group">
+          <legend>{{ group.title }}</legend>
+          <p class="group-description">{{ group.description }}</p>
+          <div class="grid">
+            {% for field in group.fields %}
+            <label class="field" for="{{ field }}">
+              <span class="field-label">{{ labels[field] }} <span class="required">*</span></span>
+              <span id="{{ field }}-hint" class="field-hint">{{ hints[field] }}</span>
+              <input id="{{ field }}" type="number" name="{{ field }}" step="any" min="0" required aria-describedby="{{ field }}-hint" placeholder="{{ placeholders[field] }}" value="{{ values.get(field, '') if values else '' }}">
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% endfor %}
+        <div class="actions">
+          <button type="button" class="button secondary" onclick="window.location.href='/'">Svuota campi</button>
+          <button type="submit" class="button primary">Calcola la stima <span aria-hidden="true">→</span></button>
+        </div>
       </form>
-      <footer><a href="/api/health">Stato API</a> · POST <code>/api/predict</code></footer>
+      <footer><span>Per integrazione tecnica:</span><a href="/api/health">stato API</a><span>·</span><code>POST /api/predict</code></footer>
     </main>
   </body>
 </html>
