@@ -8,7 +8,6 @@ import json
 from datetime import datetime, timezone
 
 import joblib
-import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -25,19 +24,12 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 from src.config import (
     FEATURE_COLUMNS,
-    INVALID_ZERO_COLUMNS,
     METRICS_PATH,
     MODEL_PATH,
     TARGET_COLUMN,
 )
 from src.data import get_dataset
-
-
-def replace_invalid_zeros(frame):
-    """Convert clinically implausible zero measurements into missing values."""
-    frame = frame.copy()
-    frame[INVALID_ZERO_COLUMNS] = frame[INVALID_ZERO_COLUMNS].replace(0, np.nan)
-    return frame
+from src.preprocessing import replace_invalid_zeros
 
 
 def make_pipeline(estimator) -> Pipeline:
