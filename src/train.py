@@ -1,7 +1,8 @@
-"""Train and persist the model used by the Flask application.
+"""Train and persist the final model used by the Flask application.
 
-The experiment is deliberately limited to the two algorithms documented in
-the machine-learning notebook: Logistic Regression and KNN.
+The comparison and tuning of Logistic Regression and KNN are documented in the
+optimization notebook. This operational script trains only the selected
+polynomial Logistic Regression pipeline.
 """
 
 import json
@@ -17,10 +18,9 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import StratifiedKFold, cross_validate, train_test_split
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, StandardScaler
+from sklearn.preprocessing import FunctionTransformer, PolynomialFeatures, StandardScaler
 
 from src.config import (
     FEATURE_COLUMNS,
@@ -32,26 +32,27 @@ from src.data import get_dataset
 from src.preprocessing import replace_invalid_zeros
 
 
-def make_pipeline(estimator) -> Pipeline:
+def make_pipeline(estimator, polynomial_degree: int | None = None) -> Pipeline:
     """Build the shared preprocessing + estimator pipeline."""
-    return Pipeline(
-        [
-            ("invalid_zeros", FunctionTransformer(replace_invalid_zeros, validate=False)),
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-            ("classifier", estimator),
-        ]
+    steps = [
+        ("invalid_zeros", FunctionTransformer(replace_invalid_zeros, validate=False)),
+        ("imputer", SimpleImputer(strategy="median")),
+    ]
+    if polynomial_degree is not None:
+        steps.append(("polynomial", PolynomialFeatures(degree=polynomial_degree, include_bias=False)))
+    steps.extend([
+        ("scaler", StandardScaler()),
+        ("classifier", estimator),
+    ])
+    return Pipeline(steps)
+
+
+def final_model() -> Pipeline:
+    """Build the tuned model selected in the optimization notebook."""
+    return make_pipeline(
+        LogisticRegression(C=0.1, class_weight="balanced", max_iter=3000, random_state=42),
+        polynomial_degree=2,
     )
-
-
-def candidate_models() -> dict[str, Pipeline]:
-    """Return the two models compared in the notebook."""
-    return {
-        "logistic_regression": make_pipeline(
-            LogisticRegression(max_iter=2000, random_state=42)
-        ),
-        "knn": make_pipeline(KNeighborsClassifier(n_neighbors=15)),
-    }
 
 
 def evaluate_model(model, x_test, y_test) -> dict[str, float]:
@@ -67,7 +68,7 @@ def evaluate_model(model, x_test, y_test) -> dict[str, float]:
 
 
 def train_and_save() -> dict:
-    """Evaluate both candidates and save the documented final model."""
+    """Evaluate, refit and save the selected final model."""
     data = get_dataset()
     x = data[FEATURE_COLUMNS]
     y = data[TARGET_COLUMN]
@@ -75,30 +76,29 @@ def train_and_save() -> dict:
         x, y, test_size=0.2, stratify=y, random_state=42
     )
 
-    models = candidate_models()
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    scoring = {"accuracy": "accuracy", "precision": "precision", "recall": "recall", "f1": "f1", "roc_auc": "roc_auc"}
-    comparison = {}
-    for name, model in models.items():
-        cv_results = cross_validate(model, x_train, y_train, cv=cv, scoring=scoring)
-        model.fit(x_train, y_train)
-        comparison[name] = {
-            "cv_mean": {metric: round(float(cv_results[f"test_{metric}"].mean()), 4) for metric in scoring},
-            "cv_std": {metric: round(float(cv_results[f"test_{metric}"].std()), 4) for metric in scoring},
-            "test": evaluate_model(model, x_test, y_test),
-        }
+    selected_name = "logistic_regression_polynomial"
+    model = final_model()
+    model.fit(x_train, y_train)
+    test_metrics = evaluate_model(model, x_test, y_test)
 
-    # This is the model selected and documented in 02_Machine_Learning.ipynb.
-    selected_name = "logistic_regression"
-    final_model = models[selected_name]
+    # Refit only after evaluation, using all labelled data available.
+    model.fit(x, y)
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(final_model, MODEL_PATH)
+    joblib.dump(model, MODEL_PATH)
 
     metrics = {
         "selected_model": selected_name,
-        "comparison": comparison,
+        "configuration": {
+            "polynomial_degree": 2,
+            "C": 0.1,
+            "class_weight": "balanced",
+            "decision_threshold": 0.5,
+        },
+        "test": test_metrics,
         "dataset_rows": len(data),
+        "training_rows": len(x_train),
+        "test_rows": len(x_test),
         "trained_at_utc": datetime.now(timezone.utc).isoformat(),
     }
     METRICS_PATH.write_text(json.dumps(metrics, indent=2), encoding="utf-8")

@@ -22,7 +22,7 @@ Per entrambi i modelli ho usato lo stesso preprocessing:
 3. ho standardizzato le variabili numeriche;
 4. ho valutato i modelli con accuracy, precision, recall, F1-score e ROC-AUC.
 
-La Logistic Regression è il modello salvato e utilizzato dall'applicazione. KNN rimane nel codice perché il confronto tra modelli è parte dell'esperimento documentato nel notebook.
+La configurazione finale è una Logistic Regression polinomiale di grado 2 con `C=0,1`, penalizzazione L2, `class_weight='balanced'` e soglia decisionale `0,5`. KNN è utilizzato esclusivamente negli esperimenti documentati nei notebook, dove il confronto tra modelli motiva la scelta finale.
 
 ## Struttura del repository
 
@@ -36,11 +36,12 @@ src/
 ├── config.py               # percorsi, colonne e configurazione condivisa
 ├── data.py                 # lettura, download e validazione del dataset
 ├── eda.py                  # generazione opzionale dei grafici EDA
-└── train.py                # training, confronto e salvataggio del modello
+└── train.py                # training e salvataggio del modello finale
 
 notebooks/
 ├── 01_Analisi_Dati.ipynb   # analisi esplorativa e visualizzazioni
-└── 02_Machine_Learning.ipynb # esperimenti, metriche e scelta del modello
+├── 02_Machine_Learning.ipynb # modelli base, metriche e confronto iniziale
+└── 03_Ottimizzazione_Modelli.ipynb # tuning, soglie e frontiere decisionali
 
 tests/test_app.py            # test automatici dell'applicazione e dell'API
 data/raw/                    # dataset locale, escluso da Git
@@ -53,15 +54,23 @@ requirements.txt             # dipendenze Python
 
 ## Flusso del progetto
 
-I notebook documentano l'analisi e gli esperimenti, mentre lo script `src/train.py` esegue il training operativo usato per creare il modello dell'applicazione.
+I tre notebook hanno ruoli distinti. Il primo descrive i dati, il secondo documenta i modelli base e il terzo ottimizza i parametri e motiva la configurazione finale. Lo script `src/train.py` esegue soltanto il training operativo del modello scelto, senza ripetere il confronto con KNN a ogni avvio.
 
 ```text
-dataset → preprocessing → Logistic Regression/KNN
-       → valutazione → modello Logistic Regression salvato
+dataset → analisi esplorativa
+       → preprocessing → confronto e tuning nei notebook
+       → Logistic Regression polinomiale scelta
+       → modello finale salvato
        → Flask/API → predizione sui dati inseriti
 ```
 
 Il modello viene salvato in `models/diabetes_model.joblib` insieme a tutto il preprocessing della pipeline. In questo modo l'applicazione applica agli input dell'utente le stesse trasformazioni utilizzate durante l'addestramento.
+
+### Configurazione finale
+
+La scelta è stata effettuata usando il training set e una cross-validation stratificata a 5 fold. Il test set è stato mantenuto separato fino alla valutazione finale. La configurazione selezionata ha ottenuto ROC-AUC media `0,846` nella cross-validation e, sul test set, accuracy `0,734`, precision `0,607`, recall `0,685`, F1-score `0,644` e ROC-AUC `0,825`.
+
+Nel notebook 3 sono presenti anche il grafico dell'effetto di `C`, il confronto tra gradi polinomiali, il grafico dei diversi valori di `k`, l'analisi delle soglie e una proiezione illustrativa delle frontiere decisionali su glucosio e BMI.
 
 ## Installazione e avvio locale
 
@@ -84,7 +93,7 @@ python -m src.train
 Se `data/raw/diabetes.csv` non è presente, `src.data` prova a scaricarlo automaticamente dalla fonte pubblica. È anche possibile inserire il CSV manualmente nella stessa cartella. Il comando aggiorna:
 
 - `models/diabetes_model.joblib`, il modello usato da Flask;
-- `reports/metrics.json`, il confronto tra i modelli e le metriche ottenute.
+- `reports/metrics.json`, la configurazione scelta e le metriche finali sul test set.
 
 Per rigenerare i grafici dell'analisi esplorativa:
 
@@ -159,11 +168,11 @@ Il dataset PIMA Indians Diabetes contiene 768 osservazioni e descrive una popola
 
 Il recall ottenuto mostra che una parte dei casi positivi non viene riconosciuta. Inoltre, il dataset è relativamente piccolo e contiene valori mancanti rappresentati da zeri. Le prestazioni misurate sono quindi utili per valutare l'esperimento, ma non costituiscono una validazione clinica.
 
-Possibili sviluppi futuri sono l'ottimizzazione controllata dei parametri `C` della Logistic Regression e `k` di KNN, la scelta di una soglia diversa da 0,5 per privilegiare il recall, la validazione su dati indipendenti e l'analisi dell'interpretabilità e dei possibili bias.
+Nel notebook 3 ho già ottimizzato `C`, il grado polinomiale, il bilanciamento delle classi e `k` di KNN, oltre ad aver analizzato soglie diverse. Restano possibili sviluppi la raccolta di più dati, la validazione su una popolazione indipendente, l'analisi dell'interpretabilità e lo studio dei possibili bias.
 
 ## Git e riproducibilità
 
-Il repository contiene codice, notebook, test e documentazione. Dataset, modello addestrato, grafici generati, ambienti virtuali e file temporanei sono esclusi tramite `.gitignore`.
+Il repository contiene codice, notebook, test e documentazione. Dataset, modello addestrato, grafici generati, ambienti virtuali e file temporanei sono esclusi tramite `.gitignore`; possono essere rigenerati seguendo le istruzioni precedenti.
 
 Per le modifiche si usano commit piccoli e descrittivi, con verbo all'imperativo e una motivazione quando utile:
 
