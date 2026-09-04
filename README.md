@@ -171,6 +171,10 @@ Il recall ottenuto mostra che una parte dei casi positivi non viene riconosciuta
 
 Nel notebook 3 ho già ottimizzato `C`, il grado polinomiale, il bilanciamento delle classi e `k` di KNN, oltre ad aver analizzato soglie diverse. Nel notebook 4 ho aggiunto spiegazioni SHAP e un primo confronto descrittivo delle metriche per fasce d'età. Restano possibili sviluppi la raccolta di più dati, la validazione su una popolazione indipendente e una valutazione della fairness con gruppi e numerosità adeguati.
 
+### Tentativo di integrazione SHAP nell'applicazione
+
+Ho provato a mostrare una spiegazione SHAP anche dopo ogni predizione dell'interfaccia web. L'approccio model-agnostic usato nel notebook, però, richiede l'inizializzazione di Numba e LLVM e in Docker poteva bloccare il worker Gunicorn fino al timeout, causando risposte lente o il mancato caricamento del CSS. Ho quindi scelto di non includere questa funzionalità nell'applicazione operativa: l'interpretabilità SHAP rimane documentata nel notebook 4, dove può essere analizzata senza compromettere l'affidabilità del servizio web.
+
 ## Git e riproducibilità
 
 Il repository contiene codice, notebook, test e documentazione. Dataset, modello addestrato, grafici generati, ambienti virtuali e file temporanei sono esclusi tramite `.gitignore`; possono essere rigenerati seguendo le istruzioni precedenti.
