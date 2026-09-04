@@ -41,7 +41,8 @@ src/
 notebooks/
 ├── 01_Analisi_Dati.ipynb   # analisi esplorativa e visualizzazioni
 ├── 02_Machine_Learning.ipynb # modelli base, metriche e confronto iniziale
-└── 03_Ottimizzazione_Modelli.ipynb # tuning, soglie e frontiere decisionali
+├── 03_Ottimizzazione_Modelli.ipynb # tuning, soglie e frontiere decisionali
+└── 04_Interpretabilita_e_Bias.ipynb # SHAP e controllo esplorativo per età
 
 tests/test_app.py            # test automatici dell'applicazione e dell'API
 data/raw/                    # dataset locale, escluso da Git
@@ -54,12 +55,12 @@ requirements.txt             # dipendenze Python
 
 ## Flusso del progetto
 
-I tre notebook hanno ruoli distinti. Il primo descrive i dati, il secondo documenta i modelli base e il terzo ottimizza i parametri e motiva la configurazione finale. Lo script `src/train.py` esegue soltanto il training operativo del modello scelto, senza ripetere il confronto con KNN a ogni avvio.
+I quattro notebook hanno ruoli distinti. Il primo descrive i dati, il secondo documenta i modelli base, il terzo ottimizza i parametri e motiva la configurazione finale, mentre il quarto usa SHAP per rendere più trasparente il comportamento del modello e svolge un primo controllo esplorativo per fasce d'età. Lo script `src/train.py` esegue soltanto il training operativo del modello scelto, senza ripetere il confronto con KNN a ogni avvio.
 
 ```text
 dataset → analisi esplorativa
        → preprocessing → confronto e tuning nei notebook
-       → Logistic Regression polinomiale scelta
+       → Logistic Regression polinomiale scelta → spiegazioni SHAP
        → modello finale salvato
        → Flask/API → predizione sui dati inseriti
 ```
@@ -70,7 +71,7 @@ Il modello viene salvato in `models/diabetes_model.joblib` insieme a tutto il pr
 
 La scelta è stata effettuata usando il training set e una cross-validation stratificata a 5 fold. Il test set è stato mantenuto separato fino alla valutazione finale. La configurazione selezionata ha ottenuto ROC-AUC media `0,846` nella cross-validation e, sul test set, accuracy `0,734`, precision `0,607`, recall `0,685`, F1-score `0,644` e ROC-AUC `0,825`.
 
-Nel notebook 3 sono presenti anche il grafico dell'effetto di `C`, il confronto tra gradi polinomiali, il grafico dei diversi valori di `k`, l'analisi delle soglie e una proiezione illustrativa delle frontiere decisionali su glucosio e BMI.
+Nel notebook 3 sono presenti anche il grafico dell'effetto di `C`, il confronto tra gradi polinomiali, il grafico dei diversi valori di `k`, l'analisi delle soglie e una proiezione illustrativa delle frontiere decisionali su glucosio e BMI. Nel notebook 4, SHAP mostra l'importanza globale delle variabili e spiega una singola predizione; il controllo per fasce d'età è descrittivo e non costituisce una dimostrazione di fairness o assenza di bias.
 
 ## Installazione e avvio locale
 
@@ -168,7 +169,7 @@ Il dataset PIMA Indians Diabetes contiene 768 osservazioni e descrive una popola
 
 Il recall ottenuto mostra che una parte dei casi positivi non viene riconosciuta. Inoltre, il dataset è relativamente piccolo e contiene valori mancanti rappresentati da zeri. Le prestazioni misurate sono quindi utili per valutare l'esperimento, ma non costituiscono una validazione clinica.
 
-Nel notebook 3 ho già ottimizzato `C`, il grado polinomiale, il bilanciamento delle classi e `k` di KNN, oltre ad aver analizzato soglie diverse. Restano possibili sviluppi la raccolta di più dati, la validazione su una popolazione indipendente, l'analisi dell'interpretabilità e lo studio dei possibili bias.
+Nel notebook 3 ho già ottimizzato `C`, il grado polinomiale, il bilanciamento delle classi e `k` di KNN, oltre ad aver analizzato soglie diverse. Nel notebook 4 ho aggiunto spiegazioni SHAP e un primo confronto descrittivo delle metriche per fasce d'età. Restano possibili sviluppi la raccolta di più dati, la validazione su una popolazione indipendente e una valutazione della fairness con gruppi e numerosità adeguati.
 
 ## Git e riproducibilità
 
