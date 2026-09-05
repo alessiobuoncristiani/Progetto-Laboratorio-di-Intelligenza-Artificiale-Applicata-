@@ -2,7 +2,7 @@
 
 Progetto finale per il corso **Laboratorio di Intelligenza Artificiale Applicata**.
 
-Il progetto analizza il dataset **PIMA Indians Diabetes** e sviluppa un sistema di classificazione binaria capace di stimare la probabilità che un'osservazione appartenga alla classe associata al diabete (`0` oppure `1`). Il sistema comprende l'analisi esplorativa dei dati, il confronto tra due modelli di machine learning, una web application Flask, un'API JSON, i test automatici e la configurazione Docker.
+Il progetto analizza il dataset **PIMA Indians Diabetes** e sviluppa un sistema di classificazione binaria capace di stimare la probabilità che un'osservazione appartenga alla classe associata al diabete (`0` oppure `1`). Il sistema comprende analisi esplorativa, confronto e ottimizzazione di modelli, interpretabilità SHAP, analisi esplorativa dei possibili bias, confronto sperimentale con un LLM, web application Flask, API JSON, test automatici e configurazione Docker.
 
 > **Avvertenza:** il progetto ha esclusivamente finalità didattiche. Il risultato non è una diagnosi, non è un dispositivo medico e non deve sostituire la valutazione di un professionista sanitario.
 
@@ -36,26 +36,36 @@ src/
 ├── config.py               # percorsi, colonne e configurazione condivisa
 ├── data.py                 # lettura, download e validazione del dataset
 ├── eda.py                  # generazione opzionale dei grafici EDA
+├── preprocessing.py        # trattamento riutilizzabile degli zeri non plausibili
 └── train.py                # training e salvataggio del modello finale
 
 notebooks/
-├── 01_Analisi_Dati.ipynb   # analisi esplorativa e visualizzazioni
-├── 02_Machine_Learning.ipynb # modelli base, metriche e confronto iniziale
-├── 03_Ottimizzazione_Modelli.ipynb # tuning, soglie e frontiere decisionali
-└── 04_Interpretabilita_e_Bias.ipynb # SHAP e controllo esplorativo per età
+├── 01_Analisi_Dati.ipynb             # analisi esplorativa e visualizzazioni
+├── 02_Machine_Learning.ipynb         # modelli base e confronto iniziale
+├── 03_Ottimizzazione_Modelli.ipynb   # tuning, soglie e scelta finale
+├── 04_Interpretabilita_e_Bias.ipynb  # SHAP e controllo esplorativo per età
+└── 05_Confronto_LLM.ipynb            # confronto sperimentale ML-Gemini
 
-tests/test_app.py            # test automatici dell'applicazione e dell'API
+tests/
+├── test_app.py              # interfaccia, validazione e API
+├── test_data.py             # caricamento e schema del dataset
+├── test_preprocessing.py    # trattamento dei valori non plausibili
+└── test_train.py            # pipeline finale e metriche
+
 data/raw/                    # dataset locale, escluso da Git
 models/                      # modello addestrato, escluso da Git
 reports/                     # metriche e grafici generati, esclusi da Git
 Dockerfile                   # immagine Docker dell'applicazione
 docker-compose.yml           # avvio del servizio e volumi condivisi
-requirements.txt             # dipendenze Python
+requirements.txt             # dipendenze del progetto e dei test
+requirements-app.txt         # dipendenze minime dell'app Docker
+requirements-notebook.txt    # dipendenze aggiuntive per Jupyter e Gemini
+.env.example                 # esempio di configurazione senza chiavi reali
 ```
 
 ## Flusso del progetto
 
-I quattro notebook hanno ruoli distinti. Il primo descrive i dati, il secondo documenta i modelli base, il terzo ottimizza i parametri e motiva la configurazione finale, mentre il quarto usa SHAP per rendere più trasparente il comportamento del modello e svolge un primo controllo esplorativo per fasce d'età. Lo script `src/train.py` esegue soltanto il training operativo del modello scelto, senza ripetere il confronto con KNN a ogni avvio.
+I cinque notebook hanno ruoli distinti. Il primo descrive i dati, il secondo documenta i modelli base, il terzo ottimizza i parametri e motiva la configurazione finale, il quarto usa SHAP e confronta le metriche per fasce d'età, mentre il quinto confronta in modo sperimentale il modello ML con Gemini. Lo script `src/train.py` esegue soltanto il training operativo del modello scelto, senza ripetere tuning e confronti a ogni avvio.
 
 ```text
 dataset → analisi esplorativa
@@ -63,6 +73,7 @@ dataset → analisi esplorativa
        → Logistic Regression polinomiale scelta → spiegazioni SHAP
        → modello finale salvato
        → Flask/API → predizione sui dati inseriti
+       → confronto sperimentale separato con LLM
 ```
 
 Il modello viene salvato in `models/diabetes_model.joblib` insieme a tutto il preprocessing della pipeline. In questo modo l'applicazione applica agli input dell'utente le stesse trasformazioni utilizzate durante l'addestramento.
@@ -73,6 +84,8 @@ La scelta è stata effettuata usando il training set e una cross-validation stra
 
 Nel notebook 3 sono presenti anche il grafico dell'effetto di `C`, il confronto tra gradi polinomiali, il grafico dei diversi valori di `k`, l'analisi delle soglie e una proiezione illustrativa delle frontiere decisionali su glucosio e BMI. Nel notebook 4, SHAP mostra l'importanza globale delle variabili e spiega una singola predizione; il controllo per fasce d'età è descrittivo e non costituisce una dimostrazione di fairness o assenza di bias.
 
+Nel notebook 5 ho confrontato il modello finale con Gemini 3.5 Flash-Lite sulle stesse 154 osservazioni di test, senza comunicare all'LLM il nome del dataset o le etichette reali. La Logistic Regression ha ottenuto accuracy `0,734`, recall `0,685` e F1-score `0,644`; Gemini ha ottenuto rispettivamente `0,714`, `0,648` e `0,614`. Il confronto è illustrativo e non costituisce una validazione diagnostica dell'LLM.
+
 ## Installazione e avvio locale
 
 Sono richiesti Python 3.11 o superiore e `pip`.
@@ -81,6 +94,12 @@ Sono richiesti Python 3.11 o superiore e `pip`.
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\\Scripts\\activate
 pip install -r requirements.txt
+```
+
+Per eseguire anche i notebook in VS Code/Jupyter, incluso il confronto Gemini:
+
+```bash
+pip install -r requirements-notebook.txt
 ```
 
 ### Addestramento
@@ -110,13 +129,15 @@ flask --app app.app run --debug
 
 L'interfaccia è disponibile all'indirizzo <http://127.0.0.1:5000>.
 
-L'applicazione non esegue un nuovo training a ogni richiesta: carica il modello già salvato. Se il dataset viene modificato, è necessario eseguire nuovamente `python -m src.train` per creare un nuovo modello.
+L'applicazione non esegue un nuovo training a ogni richiesta: carica il modello già salvato e lo mantiene in memoria per le predizioni successive. Se il dataset viene modificato, è necessario eseguire nuovamente `python -m src.train` e riavviare l'applicazione.
 
 ### Test
 
 ```bash
 pytest -q
 ```
+
+La suite controlla applicazione, API, gestione degli input errati, dataset, preprocessing, configurazione del modello e metriche.
 
 ## API JSON
 
@@ -130,28 +151,39 @@ curl -X POST http://127.0.0.1:5000/api/predict \\
 
 L'endpoint `GET /api/health` indica se l'applicazione è attiva e se il modello è disponibile.
 
-L'interfaccia include anche un pulsante per compilare un esempio di input e avvisi non bloccanti per valori molto fuori dagli intervalli tipici osservati nel dataset. Questi controlli aiutano a individuare possibili errori di digitazione, ma non sono una validazione clinica: l'utente deve sempre verificare i dati prima di interpretare il risultato.
+L'interfaccia include anche un pulsante per compilare un esempio e avvisi non bloccanti per valori fuori dagli intervalli tipici osservati nel dataset. Se glucosio, pressione, spessore cutaneo, insulina o BMI valgono zero, l'applicazione chiarisce che il modello li considera dati mancanti e li sostituisce con la mediana del training set. Questi controlli aiutano a individuare errori di digitazione, ma non sono una validazione clinica.
 
 Dopo una predizione è disponibile una breve simulazione *what-if*: variando glucosio e BMI con due slider, l'app invia una nuova richiesta all'API e mostra la relativa stima, una barra di probabilità e la differenza in punti percentuali rispetto al risultato iniziale. Gli altri dati rimangono invariati, il modello non viene riaddestrato e il risultato originario non viene modificato. La funzione serve soltanto a esplorare il comportamento del modello e non a suggerire cambiamenti terapeutici.
 
-## Docker
+## Confronto opzionale con Gemini
 
-Docker crea un ambiente riproducibile installando le dipendenze e avviando Flask tramite Gunicorn. Il server usa un worker a thread (`gthread`, quattro thread) e un keep-alive breve: in questo modo una connessione browser rimasta aperta non blocca le richieste successive, ad esempio il caricamento dei file CSS.
-
-Prima di avviare il container è consigliabile preparare localmente dataset e modello:
+Il notebook 5 usa una chiave Gemini soltanto per ripetere l'esperimento. Copio il file di esempio e inserisco la chiave nel nuovo `.env`, che rimane locale ed è escluso sia da Git sia dall'immagine Docker:
 
 ```bash
-source .venv/bin/activate
-python -m src.train
+cp .env.example .env
 ```
 
-Poi si può costruire l'immagine e avviare il servizio:
+Nel notebook le chiamate sono disattivate per impostazione predefinita con `RUN_API_CALLS = False`. Per ripetere l'esperimento imposto temporaneamente il valore a `True`, eseguo le chiamate, poi lo riporto a `False` prima di salvare. I risultati completi restano visibili negli output del notebook; i CSV locali sono ignorati da Git.
+
+## Docker
+
+Docker crea un ambiente riproducibile installando soltanto le dipendenze operative elencate in `requirements-app.txt` e avviando Flask tramite Gunicorn. Il server usa un worker a thread (`gthread`, quattro thread) e un keep-alive breve: in questo modo una connessione browser rimasta aperta non blocca le richieste successive. Un healthcheck interroga periodicamente `/api/health` per verificare che il servizio risponda.
+
+### Avvio rapido con Docker
+
+È sufficiente avere Docker Desktop installato e avviato. Non è necessario installare Python, Jupyter o le librerie del progetto sul computer. Dopo avere scaricato il repository, entro nella cartella e avvio il servizio:
 
 ```bash
+git clone https://github.com/alessiobuoncristiani/Progetto-Laboratorio-di-Intelligenza-Artificiale-Applicata-
+cd Progetto-Laboratorio-di-Intelligenza-Artificiale-Applicata-
 docker compose up --build
 ```
 
-Il servizio è disponibile su <http://localhost:5000>.
+Quando nel terminale compare l'indirizzo di ascolto di Gunicorn, apro nel browser:
+
+<http://localhost:5000>
+
+Al primo avvio, se `models/diabetes_model.joblib` non esiste, il container esegue automaticamente `python -m src.train`. Se manca anche il CSV locale, lo scarica dalla fonte pubblica prima di addestrare il modello. La prima build richiede normalmente una connessione Internet per scaricare immagine di base e dipendenze; anche il download automatico del dataset richiede la rete. Gli avvii successivi possono riutilizzare immagine, dataset e modello già salvati localmente.
 
 Il file `docker-compose.yml` collega le cartelle locali `data/`, `models/` e `reports/` alle corrispondenti cartelle del container. In questo modo il container riutilizza il dataset e il modello già presenti. Se il modello non esiste, il comando di avvio tenta di eseguire automaticamente `src.train`; se il modello esiste già, non viene sovrascritto automaticamente.
 
@@ -167,13 +199,15 @@ Per fermare il servizio:
 docker compose down
 ```
 
+Se `docker compose up --build` è in esecuzione in primo piano, posso prima interrompere la visualizzazione dei log con `Ctrl+C` e poi usare `docker compose down`. I dati scaricati e il modello restano nelle cartelle locali e non vengono cancellati.
+
 ## Dataset e limiti
 
 Il dataset PIMA Indians Diabetes contiene 768 osservazioni e descrive una popolazione specifica di donne adulte di origine Pima. Di conseguenza, i risultati non possono essere considerati automaticamente validi per popolazioni diverse.
 
 Il recall ottenuto mostra che una parte dei casi positivi non viene riconosciuta. Inoltre, il dataset è relativamente piccolo e contiene valori mancanti rappresentati da zeri. Le prestazioni misurate sono quindi utili per valutare l'esperimento, ma non costituiscono una validazione clinica.
 
-Nel notebook 3 ho già ottimizzato `C`, il grado polinomiale, il bilanciamento delle classi e `k` di KNN, oltre ad aver analizzato soglie diverse. Nel notebook 4 ho aggiunto spiegazioni SHAP e un primo confronto descrittivo delle metriche per fasce d'età. Restano possibili sviluppi la raccolta di più dati, la validazione su una popolazione indipendente e una valutazione della fairness con gruppi e numerosità adeguati.
+Nel notebook 3 ho ottimizzato `C`, grado polinomiale, bilanciamento delle classi e `k` di KNN, oltre ad aver analizzato soglie diverse. Nel notebook 4 ho aggiunto spiegazioni SHAP e un primo confronto descrittivo per fasce d'età; nel notebook 5 ho svolto il confronto opzionale con un LLM. Restano possibili sviluppi la raccolta di più dati, la validazione su una popolazione indipendente e una valutazione della fairness con gruppi e numerosità adeguati.
 
 ### Tentativo di integrazione SHAP nell'applicazione
 
@@ -181,7 +215,7 @@ Ho provato a mostrare una spiegazione SHAP anche dopo ogni predizione dell'inter
 
 ## Git e riproducibilità
 
-Il repository contiene codice, notebook, test e documentazione. Dataset, modello addestrato, grafici generati, ambienti virtuali e file temporanei sono esclusi tramite `.gitignore`; possono essere rigenerati seguendo le istruzioni precedenti.
+Il repository contiene codice, notebook, test e documentazione. Dataset, modello addestrato, grafici generati, risultati CSV dell'LLM, ambienti virtuali, chiavi API e file temporanei sono esclusi tramite `.gitignore` e `.dockerignore`; gli artefatti possono essere rigenerati seguendo le istruzioni precedenti.
 
 Per le modifiche si usano commit piccoli e descrittivi, con verbo all'imperativo e una motivazione quando utile:
 
