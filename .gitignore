@@ -14,3 +14,4 @@ data/processed/
 models/*.joblib
 reports/figures/
 reports/metrics.json
+reports/llm_*.csv

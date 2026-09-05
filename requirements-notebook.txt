@@ -1,0 +1,6 @@
+# Dipendenze aggiuntive per eseguire i notebook in VS Code/Jupyter.
+# L'applicazione Docker usa soltanto requirements.txt.
+-r requirements.txt
+google-genai==2.22.0
+ipykernel==7.3.0
+python-dotenv==1.2.3

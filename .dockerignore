@@ -1,10 +1,15 @@
 .git
+.env
+.env.*
 .venv
 venv
 __pycache__
 .pytest_cache
+notebooks
+tests
 data/raw
 models
 reports/figures
 reports/metrics.json
+reports/llm_*.csv
 *.pyc

@@ -1,18 +1,24 @@
 """Flask UI and REST API for diabetes-risk predictions."""
 
+import math
+from functools import lru_cache
 from pathlib import Path
 
 import joblib
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
-from src.config import FEATURE_COLUMNS, MODEL_PATH
+from src.config import FEATURE_COLUMNS, INVALID_ZERO_COLUMNS, MODEL_PATH
 
 FIELD_LABELS = {
-    "pregnancies": "Numero di gravidanze", "glucose": "Glucosio (mg/dL)",
-    "blood_pressure": "Pressione arteriosa (mm Hg)", "skin_thickness": "Spessore cutaneo (mm)",
-    "insulin": "Insulina (mu U/ml)", "bmi": "BMI (kg/m²)",
-    "diabetes_pedigree": "Diabetes Pedigree Function", "age": "Età (anni)",
+    "pregnancies": "Numero di gravidanze",
+    "glucose": "Glucosio (mg/dL)",
+    "blood_pressure": "Pressione arteriosa (mm Hg)",
+    "skin_thickness": "Spessore cutaneo (mm)",
+    "insulin": "Insulina (µU/mL)",
+    "bmi": "BMI (kg/m²)",
+    "diabetes_pedigree": "Diabetes Pedigree Function",
+    "age": "Età (anni)",
 }
 FIELD_HINTS = {
     "pregnancies": "Numero di gravidanze effettuate. Lo zero è un valore valido.",
@@ -73,17 +79,23 @@ def parse_payload(payload: dict) -> dict:
         raw_value = payload.get(field)
         if raw_value is None or raw_value == "":
             raise ValueError(f"Campo obbligatorio mancante: {FIELD_LABELS[field]}.")
+        if isinstance(raw_value, bool):
+            raise ValueError(f"{FIELD_LABELS[field]} deve essere un numero.")
         try:
             value = float(raw_value)
         except (TypeError, ValueError) as exc:
             raise ValueError(f"{FIELD_LABELS[field]} deve essere un numero.") from exc
+        if not math.isfinite(value):
+            raise ValueError(f"{FIELD_LABELS[field]} deve essere un numero finito.")
         if field in NON_NEGATIVE_FIELDS and value < 0:
             raise ValueError(f"{FIELD_LABELS[field]} non può essere negativo.")
         values[field] = value
     return values
 
 
+@lru_cache(maxsize=4)
 def load_model(path: Path = MODEL_PATH):
+    """Load and cache a trusted local model for subsequent predictions."""
     if not path.exists():
         raise FileNotFoundError("Modello non disponibile. Esegui prima: python -m src.train")
     return joblib.load(path)
@@ -94,7 +106,12 @@ def unusual_fields(values: dict) -> list[str]:
     warnings = []
     for field, (lower, upper) in TYPICAL_RANGES.items():
         value = values[field]
-        if value != 0 and not lower <= value <= upper:
+        if field in INVALID_ZERO_COLUMNS and value == 0:
+            warnings.append(
+                f"{FIELD_LABELS[field]} è stato inserito come 0: il modello lo considera "
+                "un dato mancante e lo sostituisce con la mediana del training set."
+            )
+        elif not lower <= value <= upper:
             warnings.append(
                 f"{FIELD_LABELS[field]} ({value:g}) è fuori dall'intervallo tipico "
                 f"osservato nel dataset ({lower:g}–{upper:g})."

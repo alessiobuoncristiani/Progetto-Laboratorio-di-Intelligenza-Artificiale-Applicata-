@@ -1,7 +1,7 @@
-import pytest
 import numpy as np
+import pytest
 
-from app.app import app, parse_payload
+from app.app import app, load_model, parse_payload, unusual_fields
 
 
 def valid_payload():
@@ -33,6 +33,25 @@ def test_home_page_is_available():
     response = app.test_client().get("/")
     assert response.status_code == 200
     assert "Stima del rischio di diabete" in response.get_data(as_text=True)
+
+
+def test_load_model_is_cached(monkeypatch, tmp_path):
+    model_path = tmp_path / "model.joblib"
+    model_path.touch()
+    calls = []
+
+    def fake_joblib_load(path):
+        calls.append(path)
+        return object()
+
+    load_model.cache_clear()
+    monkeypatch.setattr("app.app.joblib.load", fake_joblib_load)
+    first = load_model(model_path)
+    second = load_model(model_path)
+
+    assert first is second
+    assert calls == [model_path]
+    load_model.cache_clear()
 
 
 def test_api_predict_returns_prediction(monkeypatch):
@@ -67,6 +86,46 @@ def test_api_predict_rejects_missing_json():
     response = app.test_client().post("/api/predict", json={})
     assert response.status_code == 400
     assert "Campo obbligatorio" in response.get_json()["error"]
+
+
+def test_api_predict_rejects_non_numeric_value():
+    payload = valid_payload()
+    payload["glucose"] = "non valido"
+    response = app.test_client().post("/api/predict", json=payload)
+
+    assert response.status_code == 400
+    assert "deve essere un numero" in response.get_json()["error"]
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf"])
+def test_api_predict_rejects_non_finite_value(value):
+    payload = valid_payload()
+    payload["glucose"] = value
+    response = app.test_client().post("/api/predict", json=payload)
+
+    assert response.status_code == 400
+    assert "numero finito" in response.get_json()["error"]
+
+
+def test_api_predict_rejects_boolean_value():
+    payload = valid_payload()
+    payload["glucose"] = True
+    response = app.test_client().post("/api/predict", json=payload)
+
+    assert response.status_code == 400
+    assert "deve essere un numero" in response.get_json()["error"]
+
+
+def test_unusual_fields_warns_about_outlier_and_imputed_zero():
+    values = valid_payload()
+    values["glucose"] = 280
+    values["insulin"] = 0
+
+    warnings = unusual_fields(values)
+
+    assert len(warnings) == 2
+    assert "Glucosio" in warnings[0]
+    assert "dato mancante" in warnings[1]
 
 
 def test_health_reports_model_status():
