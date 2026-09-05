@@ -5,7 +5,7 @@ import seaborn as sns
 
 from src.config import FIGURES_DIR, INVALID_ZERO_COLUMNS, TARGET_COLUMN
 from src.data import get_dataset
-from src.train import replace_invalid_zeros
+from src.preprocessing import replace_invalid_zeros
 
 
 def generate_figures() -> None:
