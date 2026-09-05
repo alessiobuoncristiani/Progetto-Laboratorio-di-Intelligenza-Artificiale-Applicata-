@@ -10,7 +10,7 @@
     <main class="container">
       <header class="hero">
         <div class="hero-content">
-          <span class="brand-mark" aria-hidden="true">✦</span>
+          <span class="brand-mark" aria-label="AI">AI</span>
           <p class="eyebrow">Laboratorio di Intelligenza Artificiale Applicata</p>
           <h1>Stima del rischio di diabete</h1>
           <p class="intro">Inserisci i parametri clinici per ottenere una stima dal modello di machine learning.</p>
@@ -57,7 +57,7 @@
         </div>
         {% endif %}
       </section>
-      <section class="what-if" id="what-if" aria-labelledby="what-if-title">
+      <section class="what-if" id="what-if" data-initial-probability="{{ result.probability }}" aria-labelledby="what-if-title">
         <div class="what-if-heading">
           <div>
             <p class="section-kicker">Esplora uno scenario</p>
@@ -81,6 +81,10 @@
           <strong id="what-if-probability">{{ '%.1f'|format(result.probability * 100) }}%</strong>
           <span id="what-if-label">{{ result.label }}</span>
         </div>
+        <div class="what-if-progress" aria-label="Probabilità nello scenario simulato">
+          <span id="what-if-progress-bar" style="width: {{ result.probability * 100 }}%"></span>
+        </div>
+        <p class="what-if-delta" id="what-if-delta">Nessuna variazione rispetto alla stima iniziale.</p>
         <button type="button" class="button secondary what-if-reset" id="reset-what-if">Ripristina i valori iniziali</button>
       </section>
       {% endif %}
@@ -144,9 +148,11 @@
         const bmiValue = document.getElementById('what-if-bmi-value');
         const probability = document.getElementById('what-if-probability');
         const label = document.getElementById('what-if-label');
+        const progressBar = document.getElementById('what-if-progress-bar');
+        const delta = document.getElementById('what-if-delta');
         const initialGlucose = glucoseSlider.value;
         const initialBmi = bmiSlider.value;
-        const initialProbability = probability.textContent;
+        const initialProbability = Number(whatIf.dataset.initialProbability);
         const initialLabel = label.textContent;
         let debounceTimer;
         let activeRequest;
@@ -154,6 +160,20 @@
         function updateSliderLabels() {
           glucoseValue.textContent = glucoseSlider.value;
           bmiValue.textContent = bmiSlider.value;
+        }
+
+        function updateScenarioOutput(data) {
+          const percentage = data.probability * 100;
+          const difference = percentage - (initialProbability * 100);
+          probability.textContent = `${percentage.toFixed(1)}%`;
+          label.textContent = data.label;
+          progressBar.style.width = `${percentage}%`;
+          if (Math.abs(difference) < 0.05) {
+            delta.textContent = 'Nessuna variazione rispetto alla stima iniziale.';
+          } else {
+            const sign = difference > 0 ? '+' : '−';
+            delta.textContent = `${sign}${Math.abs(difference).toFixed(1)} punti percentuali rispetto alla stima iniziale.`;
+          }
         }
 
         async function updateScenario() {
@@ -174,8 +194,7 @@
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Errore durante la simulazione.');
-            probability.textContent = `${(data.probability * 100).toFixed(1)}%`;
-            label.textContent = data.label;
+            updateScenarioOutput(data);
           } catch (error) {
             if (error.name !== 'AbortError') {
               probability.textContent = '—';
@@ -198,8 +217,7 @@
           glucoseSlider.value = initialGlucose;
           bmiSlider.value = initialBmi;
           updateSliderLabels();
-          probability.textContent = initialProbability;
-          label.textContent = initialLabel;
+          updateScenarioOutput({ probability: initialProbability, label: initialLabel });
         });
       }
     </script>

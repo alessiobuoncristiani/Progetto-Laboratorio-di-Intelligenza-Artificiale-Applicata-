@@ -54,7 +54,9 @@ body {
   color: white;
   background: linear-gradient(135deg, #087f5b, #6b52a3);
   box-shadow: 0 8px 18px #087f5b33;
-  font-size: 1.3rem;
+  font-size: .8rem;
+  font-weight: 850;
+  letter-spacing: .08em;
 }
 
 h1 {
@@ -225,6 +227,28 @@ input[type="range"] {
 .what-if-output span:last-child {
   color: #5d6970;
   font-size: .85rem;
+}
+
+.what-if-progress {
+  height: 7px;
+  margin-top: .65rem;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #ded6ef;
+}
+
+.what-if-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6b52a3, #a071ca);
+  transition: width .2s ease;
+}
+
+.what-if-delta {
+  margin: .55rem 0 0;
+  color: #5d6970;
+  font-size: .84rem;
 }
 
 .what-if-reset {

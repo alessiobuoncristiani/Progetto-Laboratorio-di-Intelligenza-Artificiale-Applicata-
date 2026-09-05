@@ -132,7 +132,7 @@ L'endpoint `GET /api/health` indica se l'applicazione è attiva e se il modello 
 
 L'interfaccia include anche un pulsante per compilare un esempio di input e avvisi non bloccanti per valori molto fuori dagli intervalli tipici osservati nel dataset. Questi controlli aiutano a individuare possibili errori di digitazione, ma non sono una validazione clinica: l'utente deve sempre verificare i dati prima di interpretare il risultato.
 
-Dopo una predizione è disponibile una breve simulazione *what-if*: variando glucosio e BMI con due slider, l'app invia una nuova richiesta all'API e mostra la relativa stima. Gli altri dati rimangono invariati, il modello non viene riaddestrato e il risultato originario non viene modificato. La funzione serve soltanto a esplorare il comportamento del modello e non a suggerire cambiamenti terapeutici.
+Dopo una predizione è disponibile una breve simulazione *what-if*: variando glucosio e BMI con due slider, l'app invia una nuova richiesta all'API e mostra la relativa stima, una barra di probabilità e la differenza in punti percentuali rispetto al risultato iniziale. Gli altri dati rimangono invariati, il modello non viene riaddestrato e il risultato originario non viene modificato. La funzione serve soltanto a esplorare il comportamento del modello e non a suggerire cambiamenti terapeutici.
 
 ## Docker
 
