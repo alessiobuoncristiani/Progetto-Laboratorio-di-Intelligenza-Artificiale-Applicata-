@@ -52,6 +52,16 @@ FIELD_GROUPS = [
     },
 ]
 NON_NEGATIVE_FIELDS = set(FEATURE_COLUMNS)
+TYPICAL_RANGES = {
+    "pregnancies": (0, 17),
+    "glucose": (50, 200),
+    "blood_pressure": (40, 120),
+    "skin_thickness": (5, 60),
+    "insulin": (10, 600),
+    "bmi": (10, 60),
+    "diabetes_pedigree": (0.08, 2.0),
+    "age": (18, 90),
+}
 
 
 def parse_payload(payload: dict) -> dict:
@@ -79,6 +89,19 @@ def load_model(path: Path = MODEL_PATH):
     return joblib.load(path)
 
 
+def unusual_fields(values: dict) -> list[str]:
+    """Return non-blocking warnings for values outside typical dataset ranges."""
+    warnings = []
+    for field, (lower, upper) in TYPICAL_RANGES.items():
+        value = values[field]
+        if value != 0 and not lower <= value <= upper:
+            warnings.append(
+                f"{FIELD_LABELS[field]} ({value:g}) è fuori dall'intervallo tipico "
+                f"osservato nel dataset ({lower:g}–{upper:g})."
+            )
+    return warnings
+
+
 def create_app(model_path: Path = MODEL_PATH) -> Flask:
     app = Flask(__name__)
     app.config["MODEL_PATH"] = model_path
@@ -91,6 +114,7 @@ def create_app(model_path: Path = MODEL_PATH) -> Flask:
             "prediction": predicted_class,
             "label": "Rischio elevato" if predicted_class else "Rischio non elevato",
             "probability": round(probability, 4),
+            "warnings": unusual_fields(values),
             "disclaimer": "Risultato didattico: non costituisce una diagnosi medica.",
         }
 

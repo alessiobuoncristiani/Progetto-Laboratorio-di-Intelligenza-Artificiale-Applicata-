@@ -47,6 +47,41 @@
           <span style="width: {{ result.probability * 100 }}%"></span>
         </div>
         <small>{{ result.disclaimer }}</small>
+        {% if result.warnings %}
+        <div class="input-warning" role="alert">
+          <strong>Controlla i dati inseriti</strong>
+          <ul>
+            {% for warning in result.warnings %}<li>{{ warning }}</li>{% endfor %}
+          </ul>
+          <small>L'avviso non blocca la predizione: serve a verificare eventuali errori di digitazione.</small>
+        </div>
+        {% endif %}
+      </section>
+      <section class="what-if" id="what-if" aria-labelledby="what-if-title">
+        <div class="what-if-heading">
+          <div>
+            <p class="section-kicker">Esplora uno scenario</p>
+            <h2 id="what-if-title">Come cambierebbe la stima?</h2>
+          </div>
+          <span class="what-if-badge">Simulazione didattica</span>
+        </div>
+        <p class="what-if-intro">Modifica glucosio o BMI per osservare come varia la stima del modello, mantenendo invariati gli altri parametri. Questa simulazione non modifica il risultato iniziale né costituisce un consiglio clinico.</p>
+        <div class="what-if-controls">
+          <label class="slider-field" for="what-if-glucose">
+            <span>Glucosio <strong id="what-if-glucose-value">{{ values.get('glucose') }}</strong> mg/dL</span>
+            <input id="what-if-glucose" type="range" min="50" max="200" step="1" value="{{ values.get('glucose') }}">
+          </label>
+          <label class="slider-field" for="what-if-bmi">
+            <span>BMI <strong id="what-if-bmi-value">{{ values.get('bmi') }}</strong> kg/m²</span>
+            <input id="what-if-bmi" type="range" min="15" max="55" step="0.1" value="{{ values.get('bmi') }}">
+          </label>
+        </div>
+        <div class="what-if-output" aria-live="polite">
+          <span>Stima nello scenario simulato</span>
+          <strong id="what-if-probability">{{ '%.1f'|format(result.probability * 100) }}%</strong>
+          <span id="what-if-label">{{ result.label }}</span>
+        </div>
+        <button type="button" class="button secondary what-if-reset" id="reset-what-if">Ripristina i valori iniziali</button>
       </section>
       {% endif %}
       <form method="post" class="prediction-form">
@@ -73,11 +108,100 @@
         </fieldset>
         {% endfor %}
         <div class="actions">
-          <button type="button" class="button secondary" onclick="window.location.href='/'">Svuota campi</button>
+          <button type="button" class="button tertiary" id="fill-example">Inserisci un esempio</button>
+          <button type="button" class="button secondary" id="reset-form">Svuota campi</button>
           <button type="submit" class="button primary">Calcola la stima <span aria-hidden="true">→</span></button>
         </div>
       </form>
       <footer><span>Per integrazione tecnica:</span><a href="/api/health">stato API</a><span>·</span><code>POST /api/predict</code></footer>
     </main>
+    <script>
+      const form = document.querySelector('.prediction-form');
+
+      document.getElementById('fill-example').addEventListener('click', function () {
+        const example = {
+          pregnancies: 2, glucose: 120, blood_pressure: 70, skin_thickness: 20,
+          insulin: 79, bmi: 28.5, diabetes_pedigree: 0.3, age: 35
+        };
+        Object.entries(example).forEach(([name, value]) => {
+          const input = document.querySelector(`[name="${name}"]`);
+          if (input) input.value = value;
+        });
+      });
+
+      document.getElementById('reset-form').addEventListener('click', function () {
+        form.querySelectorAll('input').forEach((input) => { input.value = ''; });
+        document.querySelectorAll('.result, .what-if, .error').forEach((element) => {
+          element.remove();
+        });
+      });
+
+      const whatIf = document.getElementById('what-if');
+      if (whatIf) {
+        const glucoseSlider = document.getElementById('what-if-glucose');
+        const bmiSlider = document.getElementById('what-if-bmi');
+        const glucoseValue = document.getElementById('what-if-glucose-value');
+        const bmiValue = document.getElementById('what-if-bmi-value');
+        const probability = document.getElementById('what-if-probability');
+        const label = document.getElementById('what-if-label');
+        const initialGlucose = glucoseSlider.value;
+        const initialBmi = bmiSlider.value;
+        const initialProbability = probability.textContent;
+        const initialLabel = label.textContent;
+        let debounceTimer;
+        let activeRequest;
+
+        function updateSliderLabels() {
+          glucoseValue.textContent = glucoseSlider.value;
+          bmiValue.textContent = bmiSlider.value;
+        }
+
+        async function updateScenario() {
+          const payload = Object.fromEntries(new FormData(form).entries());
+          payload.glucose = glucoseSlider.value;
+          payload.bmi = bmiSlider.value;
+
+          if (activeRequest) activeRequest.abort();
+          activeRequest = new AbortController();
+          probability.textContent = '…';
+          label.textContent = 'Calcolo in corso';
+          try {
+            const response = await fetch('/api/predict', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              signal: activeRequest.signal
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Errore durante la simulazione.');
+            probability.textContent = `${(data.probability * 100).toFixed(1)}%`;
+            label.textContent = data.label;
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              probability.textContent = '—';
+              label.textContent = 'Impossibile aggiornare la simulazione';
+            }
+          }
+        }
+
+        function scheduleScenario() {
+          updateSliderLabels();
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(updateScenario, 250);
+        }
+
+        glucoseSlider.addEventListener('input', scheduleScenario);
+        bmiSlider.addEventListener('input', scheduleScenario);
+        document.getElementById('reset-what-if').addEventListener('click', function () {
+          clearTimeout(debounceTimer);
+          if (activeRequest) activeRequest.abort();
+          glucoseSlider.value = initialGlucose;
+          bmiSlider.value = initialBmi;
+          updateSliderLabels();
+          probability.textContent = initialProbability;
+          label.textContent = initialLabel;
+        });
+      }
+    </script>
   </body>
 </html>
