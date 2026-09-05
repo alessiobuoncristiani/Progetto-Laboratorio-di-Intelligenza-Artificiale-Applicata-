@@ -141,6 +141,96 @@ h2 {
   padding: 1.3rem 1.4rem;
 }
 
+.what-if {
+  margin: 0 0 1.25rem;
+  padding: 1.3rem 1.4rem;
+  border: 1px solid #cfc4eb;
+  border-radius: 16px;
+  background: #faf8ff;
+  box-shadow: 0 12px 30px rgba(24, 51, 59, .07);
+}
+
+.what-if-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.what-if-heading .section-kicker {
+  color: #6b52a3;
+}
+
+.what-if-badge {
+  padding: .4rem .65rem;
+  border-radius: 999px;
+  color: #5b427f;
+  background: #eee8fa;
+  font-size: .75rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.what-if-intro {
+  max-width: 780px;
+  margin: .75rem 0 1.1rem;
+  color: #53666c;
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+.what-if-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.slider-field {
+  display: grid;
+  gap: .55rem;
+  padding: .9rem;
+  border: 1px solid #ddd5f0;
+  border-radius: 10px;
+  background: white;
+  color: #425960;
+  font-size: .9rem;
+}
+
+.slider-field strong {
+  color: #4e3678;
+}
+
+input[type="range"] {
+  padding: 0;
+  accent-color: #6b52a3;
+}
+
+.what-if-output {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: 1rem;
+  padding: .9rem;
+  border-radius: 10px;
+  color: #4e3678;
+  background: #eee8fa;
+}
+
+.what-if-output strong {
+  font-size: 1.45rem;
+  letter-spacing: -.03em;
+}
+
+.what-if-output span:last-child {
+  color: #5d6970;
+  font-size: .85rem;
+}
+
+.what-if-reset {
+  margin-top: .9rem;
+}
+
 .result-heading {
   display: flex;
   align-items: end;
@@ -193,6 +283,25 @@ h2 {
 .result small {
   opacity: .8;
   line-height: 1.4;
+}
+
+.input-warning {
+  margin-top: 1rem;
+  padding: .8rem .9rem;
+  border: 1px solid #e7c36d;
+  border-radius: 10px;
+  color: #6e5816;
+  background: #fff9e7;
+  font-size: .86rem;
+}
+
+.input-warning strong {
+  color: #806300;
+}
+
+.input-warning ul {
+  margin: .4rem 0;
+  padding-left: 1.2rem;
 }
 
 .prediction-form {
@@ -342,6 +451,15 @@ input:user-invalid {
   background: #dce9e5;
 }
 
+.tertiary {
+  color: #5b427f;
+  background: #f0eafb;
+}
+
+.tertiary:hover {
+  background: #e5daf6;
+}
+
 .about {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -402,6 +520,20 @@ code {
 
   .about {
     grid-template-columns: 1fr;
+  }
+
+  .what-if-heading,
+  .what-if-controls {
+    display: block;
+  }
+
+  .what-if-badge {
+    display: inline-block;
+    margin-top: .65rem;
+  }
+
+  .slider-field + .slider-field {
+    margin-top: .8rem;
   }
 
   .required-note {

@@ -49,6 +49,20 @@ def test_api_predict_returns_prediction(monkeypatch):
     assert data["probability"] == 0.2
 
 
+def test_prediction_page_includes_what_if_controls(monkeypatch):
+    class DummyModel:
+        def predict_proba(self, frame):
+            return np.array([[0.8, 0.2]])
+
+    monkeypatch.setattr("app.app.load_model", lambda path: DummyModel())
+    response = app.test_client().post("/", data=valid_payload())
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'id="what-if-glucose"' in html
+    assert 'id="what-if-bmi"' in html
+
+
 def test_api_predict_rejects_missing_json():
     response = app.test_client().post("/api/predict", json={})
     assert response.status_code == 400

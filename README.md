@@ -130,9 +130,13 @@ curl -X POST http://127.0.0.1:5000/api/predict \\
 
 L'endpoint `GET /api/health` indica se l'applicazione è attiva e se il modello è disponibile.
 
+L'interfaccia include anche un pulsante per compilare un esempio di input e avvisi non bloccanti per valori molto fuori dagli intervalli tipici osservati nel dataset. Questi controlli aiutano a individuare possibili errori di digitazione, ma non sono una validazione clinica: l'utente deve sempre verificare i dati prima di interpretare il risultato.
+
+Dopo una predizione è disponibile una breve simulazione *what-if*: variando glucosio e BMI con due slider, l'app invia una nuova richiesta all'API e mostra la relativa stima. Gli altri dati rimangono invariati, il modello non viene riaddestrato e il risultato originario non viene modificato. La funzione serve soltanto a esplorare il comportamento del modello e non a suggerire cambiamenti terapeutici.
+
 ## Docker
 
-Docker crea un ambiente riproducibile installando le dipendenze e avviando Flask tramite Gunicorn.
+Docker crea un ambiente riproducibile installando le dipendenze e avviando Flask tramite Gunicorn. Il server usa un worker a thread (`gthread`, quattro thread) e un keep-alive breve: in questo modo una connessione browser rimasta aperta non blocca le richieste successive, ad esempio il caricamento dei file CSS.
 
 Prima di avviare il container è consigliabile preparare localmente dataset e modello:
 
