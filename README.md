@@ -86,9 +86,30 @@ Nel notebook 3 sono presenti anche il grafico dell'effetto di `C`, il confronto 
 
 Nel notebook 5 ho confrontato il modello finale con Gemini 3.5 Flash-Lite sulle stesse 154 osservazioni di test, senza comunicare all'LLM il nome del dataset o le etichette reali. La Logistic Regression ha ottenuto accuracy `0,734`, recall `0,685` e F1-score `0,644`; Gemini ha ottenuto rispettivamente `0,714`, `0,648` e `0,614`. Il confronto è illustrativo e non costituisce una validazione diagnostica dell'LLM.
 
-## Installazione e avvio locale
+## Manuale di installazione e utilizzo
 
-Sono richiesti Python 3.11 o superiore e `pip`.
+Per installare ed eseguire il progetto sono disponibili **due modalità**:
+
+1. **Installazione con Docker, consigliata per utilizzare l'applicazione:** richiede soltanto Docker Desktop e gestisce automaticamente ambiente Python, dipendenze, dataset, addestramento del modello e server web.
+2. **Installazione locale, utile per sviluppo e riproduzione degli esperimenti:** permette di modificare il codice, eseguire i test, rigenerare analisi e modello e aprire i notebook Jupyter.
+
+Le due modalità sono alternative per avviare l'applicazione. Chi vuole soltanto provarla può usare Docker; l'installazione locale serve invece per lavorare direttamente sul codice e riprodurre tutte le fasi del progetto.
+
+### Avvio immediato consigliato
+
+Con Docker Desktop installato e avviato, il percorso più semplice è:
+
+```bash
+git clone https://github.com/alessiobuoncristiani/Progetto-Laboratorio-di-Intelligenza-Artificiale-Applicata-
+cd Progetto-Laboratorio-di-Intelligenza-Artificiale-Applicata-
+docker compose up --build
+```
+
+Al termine della preparazione apro <http://localhost:5000>. Dataset, training e avvio del server vengono gestiti automaticamente; la sezione Docker contiene dettagli, arresto e aggiornamento manuale del modello.
+
+## Installazione locale per sviluppo e notebook
+
+Questa modalità è alternativa a Docker. Sono richiesti Python 3.11 o superiore e `pip`.
 
 ```bash
 python3 -m venv .venv
@@ -165,7 +186,7 @@ cp .env.example .env
 
 Nel notebook le chiamate sono disattivate per impostazione predefinita con `RUN_API_CALLS = False`. Per ripetere l'esperimento imposto temporaneamente il valore a `True`, eseguo le chiamate, poi lo riporto a `False` prima di salvare. I risultati completi restano visibili negli output del notebook; i CSV locali sono ignorati da Git.
 
-## Docker
+## Avvio con Docker (modalità consigliata)
 
 Docker crea un ambiente riproducibile installando soltanto le dipendenze operative elencate in `requirements-app.txt` e avviando Flask tramite Gunicorn. Il server usa un worker a thread (`gthread`, quattro thread) e un keep-alive breve: in questo modo una connessione browser rimasta aperta non blocca le richieste successive. Un healthcheck interroga periodicamente `/api/health` per verificare che il servizio risponda.
 
@@ -217,12 +238,4 @@ Ho provato a mostrare una spiegazione SHAP anche dopo ogni predizione dell'inter
 
 Il repository contiene codice, notebook, test e documentazione. Dataset, modello addestrato, grafici generati, risultati CSV dell'LLM, ambienti virtuali, chiavi API e file temporanei sono esclusi tramite `.gitignore` e `.dockerignore`; gli artefatti possono essere rigenerati seguendo le istruzioni precedenti.
 
-Per le modifiche si usano commit piccoli e descrittivi, con verbo all'imperativo e una motivazione quando utile:
-
-```bash
-git add <file>
-git commit -m "docs: clarify Docker workflow"
-git push origin main
-```
-
-Prefissi consigliati: `feat`, `fix`, `docs`, `test`, `refactor` e `chore`.
+Durante lo sviluppo ho lavorato su branch dedicati e ho mantenuto commit piccoli e descrittivi. I messaggi indicano lo scopo delle modifiche con prefissi coerenti, come `feat`, `fix`, `docs`, `test`, `refactor` e `chore`; i branch completati e verificati sono stati poi integrati in `main` tramite commit di merge espliciti.
